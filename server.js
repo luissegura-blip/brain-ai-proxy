@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "20mb" }));
 
 const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
@@ -37,6 +37,7 @@ app.post("/ai", async (req, res) => {
         if (!question) {
 
             return res.status(400).json({
+                type: "text",
                 error: "No llegó ninguna pregunta"
             });
 
@@ -49,10 +50,6 @@ app.post("/ai", async (req, res) => {
 
                 temperature: 0.2,
 
-                response_format: {
-                    type: "json_object"
-                },
-
                 messages: [
 
                     {
@@ -61,7 +58,7 @@ app.post("/ai", async (req, res) => {
 
 Eres Brain AI.
 
-Eres especialista senior en:
+Especialista senior en:
 
 - Power BI
 - Marketing Intelligence
@@ -71,25 +68,52 @@ Eres especialista senior en:
 - Share of Voice
 - Share of Investment
 
-REGLAS
+IMPORTANTE:
+
+Debes responder SIEMPRE en formato JSON válido.
+
+Nunca respondas texto plano.
+
+Formato para respuestas analíticas:
+
+{
+  "type": "text",
+  "answer": "respuesta"
+}
+
+Formato para solicitudes de gráficos:
+
+{
+  "type": "chart",
+  "chartType": "bar",
+  "title": "Título",
+  "dimension": "NombreDimension",
+  "metric": "NombreMetrica"
+}
+
+Tipos permitidos:
+
+- bar
+- line
+- pie
+- scatter
+
+Reglas:
 
 1. Analiza únicamente los datos entregados.
 2. No inventes información.
 3. No asumas métricas inexistentes.
-4. Responde siempre en español.
-5. Sé ejecutivo y orientado a negocio.
-6. Entrega hallazgos accionables.
+4. Responde en español.
+5. Sé ejecutivo.
+6. Entrega insights accionables.
 
-TIPOS DE RESPUESTA
+Dimensiones disponibles:
 
-RESPUESTA TEXTO
+${dimensions.join(", ")}
 
-{
-  "type": "text",
-  "answer": "respuesta aquí"
-}
+Métricas disponibles:
 
-RESPUESTA GRÁFICO
+${metrics.join(", ")}
 
 Si el usuario solicita:
 
@@ -102,38 +126,12 @@ Si el usuario solicita:
 - línea
 - linea
 - pie
-- torta
 - donut
+- torta
 - dispersión
-
-responde exclusivamente:
-
-{
-  "type": "chart",
-  "chartType": "bar",
-  "title": "Título",
-  "dimension": "NombreDimension",
-  "metric": "NombreMetrica"
-}
-
-chartType permitidos:
-
-- bar
-- line
-- pie
 - scatter
 
-IMPORTANTE
-
-dimension debe existir dentro de:
-
-${dimensions.join(", ")}
-
-metric debe existir dentro de:
-
-${metrics.join(", ")}
-
-Si no existen, responde tipo text explicando el problema.
+debes responder usando type = "chart".
 
 `
                     },
@@ -142,18 +140,15 @@ Si no existen, responde tipo text explicando el problema.
                         role: "user",
                         content: `
 
-CONTEXTO DEL VISUAL
+CONTEXTO
 
 Dimensiones:
-
 ${dimensions.join(", ")}
 
 Métricas:
-
 ${metrics.join(", ")}
 
 Cantidad de registros:
-
 ${dataset.length}
 
 DATOS
@@ -219,4 +214,5 @@ app.listen(PORT, () => {
     );
 
 });
+
 
