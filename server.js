@@ -50,12 +50,14 @@ app.post("/ai", async (req, res) => {
 
             lowerQuestion.includes("gráfico") ||
             lowerQuestion.includes("grafico") ||
+            lowerQuestion.includes("gráfica") ||
+            lowerQuestion.includes("grafica") ||
             lowerQuestion.includes("chart") ||
             lowerQuestion.includes("visualización") ||
             lowerQuestion.includes("visualizacion") ||
-            lowerQuestion.includes("grafica") ||
-            lowerQuestion.includes("gráfica") ||
+            lowerQuestion.includes("visualiza") ||
             lowerQuestion.includes("barras") ||
+            lowerQuestion.includes("barra") ||
             lowerQuestion.includes("línea") ||
             lowerQuestion.includes("linea") ||
             lowerQuestion.includes("pie") ||
@@ -98,31 +100,51 @@ Debes responder SIEMPRE JSON válido.
 
 Nunca respondas texto plano.
 
+=========================
 FORMATO RESPUESTA TEXTO
+=========================
 
 {
   "type": "text",
   "answer": "respuesta"
 }
 
+=========================
 FORMATO RESPUESTA GRÁFICO
+=========================
 
 {
-  "type": "chart",
-  "chartType": "bar",
-  "title": "Título",
-  "dimension": "NombreDimension",
-  "metric": "NombreMetrica"
+  "type":"chart",
+  "chartType":"bar",
+  "title":"Título",
+  "dimension":"NombreDimension",
+  "metric":"NombreMetrica",
+  "aggregation":"sum",
+  "top":20
 }
 
-TIPOS PERMITIDOS
+=========================
+TIPOS DE GRÁFICO
+=========================
 
 - bar
 - line
 - pie
 - scatter
 
+=========================
+AGREGACIONES
+=========================
+
+- sum
+- avg
+- count
+- min
+- max
+
+=========================
 REGLAS
+=========================
 
 1. Analiza únicamente los datos entregados.
 2. No inventes información.
@@ -130,20 +152,25 @@ REGLAS
 4. Responde siempre en español.
 5. Sé ejecutivo.
 6. Entrega insights accionables.
+7. Usa SOLO dimensiones y métricas existentes.
 
-Dimensiones disponibles:
+=========================
+DIMENSIONES DISPONIBLES
+=========================
 
 ${dimensions.join(", ")}
 
-Métricas disponibles:
+=========================
+MÉTRICAS DISPONIBLES
+=========================
 
 ${metrics.join(", ")}
 
+=========================
 REGLA DE ORO
+=========================
 
-ÚNICAMENTE responde con type="chart"
-cuando el usuario solicite explícitamente
-una visualización.
+Genera type="chart" únicamente cuando el usuario solicite explícitamente una visualización.
 
 Ejemplos:
 
@@ -154,30 +181,61 @@ Ejemplos:
 - Grafica la inversión
 - Quiero una visualización
 
-Si el usuario pregunta:
+=========================
+TOP N
+=========================
 
-- Top
-- Ranking
+Si el usuario solicita:
+
 - Top 5
-- Resumen
+- Top 10
+- Top 20
+
+extrae el valor y úsalo en "top".
+
+Si no lo especifica:
+
+top = 20
+
+=========================
+AGREGACIÓN
+=========================
+
+Por defecto utiliza:
+
+aggregation = "sum"
+
+Si el usuario pide:
+
+- promedio → avg
+- media → avg
+- cantidad → count
+- conteo → count
+- mínimo → min
+- máximo → max
+
+=========================
+PREGUNTAS ANALÍTICAS
+=========================
+
+Para preguntas como:
+
+- Top canal
+- Mejor campaña
+- Ranking
 - Hallazgos
 - Insights
 - Recomendaciones
-- Mejor campaña
-- Peor campaña
-- Mejor canal
-- Análisis
+- Resumen
 - Comparativo
-- Eficiencia
+- Análisis
 
-Debes responder con:
+responde SIEMPRE:
 
 {
-  "type": "text",
-  "answer": "..."
+  "type":"text",
+  "answer":"..."
 }
-
-Nunca generes gráficos para preguntas analíticas normales.
 
 `
                     },
@@ -197,8 +255,7 @@ ${metrics.join(", ")}
 Cantidad de registros:
 ${dataset.length}
 
-El usuario solicitó gráfico:
-
+Usuario solicitó gráfico:
 ${wantsChart}
 
 DATOS
@@ -223,7 +280,8 @@ ${question}
 
         try {
 
-            result = JSON.parse(content);
+            result =
+                JSON.parse(content);
 
         } catch {
 
@@ -277,3 +335,4 @@ app.listen(PORT, () => {
     );
 
 });
+
