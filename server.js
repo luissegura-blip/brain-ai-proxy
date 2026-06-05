@@ -43,12 +43,36 @@ app.post("/ai", async (req, res) => {
 
         }
 
+        const lowerQuestion =
+            question.toLowerCase();
+
+        const wantsChart =
+
+            lowerQuestion.includes("gráfico") ||
+            lowerQuestion.includes("grafico") ||
+            lowerQuestion.includes("chart") ||
+            lowerQuestion.includes("visualización") ||
+            lowerQuestion.includes("visualizacion") ||
+            lowerQuestion.includes("grafica") ||
+            lowerQuestion.includes("gráfica") ||
+            lowerQuestion.includes("barras") ||
+            lowerQuestion.includes("línea") ||
+            lowerQuestion.includes("linea") ||
+            lowerQuestion.includes("pie") ||
+            lowerQuestion.includes("donut") ||
+            lowerQuestion.includes("torta") ||
+            lowerQuestion.includes("scatter");
+
         const response =
             await client.chat.completions.create({
 
                 model: "gpt-4o-mini",
 
                 temperature: 0.2,
+
+                response_format: {
+                    type: "json_object"
+                },
 
                 messages: [
 
@@ -68,20 +92,20 @@ Especialista senior en:
 - Share of Voice
 - Share of Investment
 
-IMPORTANTE:
+IMPORTANTE
 
-Debes responder SIEMPRE en formato JSON válido.
+Debes responder SIEMPRE JSON válido.
 
 Nunca respondas texto plano.
 
-Formato para respuestas analíticas:
+FORMATO RESPUESTA TEXTO
 
 {
   "type": "text",
   "answer": "respuesta"
 }
 
-Formato para solicitudes de gráficos:
+FORMATO RESPUESTA GRÁFICO
 
 {
   "type": "chart",
@@ -91,19 +115,19 @@ Formato para solicitudes de gráficos:
   "metric": "NombreMetrica"
 }
 
-Tipos permitidos:
+TIPOS PERMITIDOS
 
 - bar
 - line
 - pie
 - scatter
 
-Reglas:
+REGLAS
 
 1. Analiza únicamente los datos entregados.
 2. No inventes información.
 3. No asumas métricas inexistentes.
-4. Responde en español.
+4. Responde siempre en español.
 5. Sé ejecutivo.
 6. Entrega insights accionables.
 
@@ -115,23 +139,45 @@ Métricas disponibles:
 
 ${metrics.join(", ")}
 
-Si el usuario solicita:
+REGLA DE ORO
 
-- gráfico
-- grafico
-- chart
-- visualización
-- visualizacion
-- barras
-- línea
-- linea
-- pie
-- donut
-- torta
-- dispersión
-- scatter
+ÚNICAMENTE responde con type="chart"
+cuando el usuario solicite explícitamente
+una visualización.
 
-debes responder usando type = "chart".
+Ejemplos:
+
+- Quiero un gráfico
+- Muéstrame una gráfica
+- Haz un chart
+- Visualiza los datos
+- Grafica la inversión
+- Quiero una visualización
+
+Si el usuario pregunta:
+
+- Top
+- Ranking
+- Top 5
+- Resumen
+- Hallazgos
+- Insights
+- Recomendaciones
+- Mejor campaña
+- Peor campaña
+- Mejor canal
+- Análisis
+- Comparativo
+- Eficiencia
+
+Debes responder con:
+
+{
+  "type": "text",
+  "answer": "..."
+}
+
+Nunca generes gráficos para preguntas analíticas normales.
 
 `
                     },
@@ -150,6 +196,10 @@ ${metrics.join(", ")}
 
 Cantidad de registros:
 ${dataset.length}
+
+El usuario solicitó gráfico:
+
+${wantsChart}
 
 DATOS
 
@@ -184,6 +234,19 @@ ${question}
 
         }
 
+        if (
+            !wantsChart &&
+            result.type === "chart"
+        ) {
+
+            result = {
+                type: "text",
+                answer:
+                    "La solicitud corresponde a un análisis. No se requiere gráfico."
+            };
+
+        }
+
         res.json(result);
 
     } catch (error) {
@@ -214,5 +277,3 @@ app.listen(PORT, () => {
     );
 
 });
-
-
