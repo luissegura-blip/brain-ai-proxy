@@ -11,82 +11,148 @@ app.use(cors());
 app.use(express.json());
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+apiKey: process.env.OPENAI_API_KEY
 });
 
 app.get("/", (req, res) => {
-  res.send("Proxy activo");
+res.send("Brain AI Proxy activo");
 });
 
 app.post("/ai", async (req, res) => {
 
-  try {
 
-    const question = req.body.question || "";
-    const dataset = req.body.dataset || [];
+try {
+
+    const question =
+        req.body.question || "";
+
+    const dataset =
+        req.body.dataset || [];
+
+    const dimensions =
+        req.body.dimensions || [];
+
+    const metrics =
+        req.body.metrics || [];
 
     if (!question) {
-      return res.status(400).json({
-        error: "No llegó ninguna pregunta"
-      });
+
+        return res.status(400).json({
+            error: "No llegó ninguna pregunta"
+        });
+
     }
 
-    const response = await client.chat.completions.create({
+    const response =
+        await client.chat.completions.create({
 
-      model: "gpt-4o-mini",
+            model: "gpt-4o-mini",
 
-      messages: [
+            temperature: 0.2,
 
-        {
-          role: "system",
-          content: `
+            messages: [
+
+                {
+                    role: "system",
+                    content: `
+
+
 Eres Brain AI.
 
-Eres un analista senior de Power BI especializado en marketing, medios e inversión.
+Eres un especialista senior en:
 
-Analiza únicamente los datos entregados.
+* Power BI
+* Marketing Intelligence
+* Media Analytics
+* Business Intelligence
+* Performance Digital
+* Share of Voice
+* Share of Investment
 
-Responde en español.
+Reglas:
 
-Sé breve, ejecutivo y orientado a insights.
+1. Analiza únicamente los datos entregados.
+2. No inventes información.
+3. No asumas métricas inexistentes.
+4. Responde siempre en español.
+5. Sé ejecutivo y orientado a negocio.
+6. Entrega hallazgos accionables.
+7. Cuando sea posible incluye:
+
+   * Hallazgo principal
+   * Insight
+   * Recomendación
+
+Si la pregunta requiere información que no existe en los datos,
+indica claramente qué métrica o dimensión hace falta.
+
 `
-        },
+},
 
-        {
-          role: "user",
-          content: `
-Dataset:
+
+                {
+                    role: "user",
+                    content: `
+
+
+CONTEXTO DEL VISUAL
+
+Dimensiones:
+
+${dimensions.join(", ")}
+
+Métricas:
+
+${metrics.join(", ")}
+
+Cantidad de registros:
+
+${dataset.length}
+
+DATOS
 
 ${JSON.stringify(dataset, null, 2)}
 
-Pregunta:
+PREGUNTA
 
 ${question}
+
 `
-        }
+}
 
-      ]
 
-    });
+            ]
+
+        });
 
     res.json({
-      answer: response.choices[0].message.content
+
+        answer:
+            response.choices?.[0]?.message?.content ||
+            "No fue posible generar una respuesta."
+
     });
 
-  } catch (error) {
+} catch (error) {
 
     console.error(error);
 
     res.status(500).json({
-      error: error.message
+
+        error:
+            error?.message ||
+            "Error interno del servidor"
+
     });
 
-  }
+}
+
 
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT =
+process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`Servidor activo en puerto ${PORT}`);
+
 });
