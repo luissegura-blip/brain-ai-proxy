@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
@@ -10,8 +10,8 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "20mb" }));
 
-const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
+const client = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY
 });
 
 app.get("/", (req, res) => {
@@ -65,22 +65,7 @@ app.post("/ai", async (req, res) => {
             lowerQuestion.includes("torta") ||
             lowerQuestion.includes("scatter");
 
-        const response =
-            await client.chat.completions.create({
-
-                model: "gpt-4o-mini",
-
-                temperature: 0.2,
-
-                response_format: {
-                    type: "json_object"
-                },
-
-                messages: [
-
-                    {
-                        role: "system",
-                        content: `
+        const systemPrompt = `
 
 Eres Brain AI.
 
@@ -96,22 +81,28 @@ Especialista senior en:
 
 IMPORTANTE
 
-Debes responder SIEMPRE JSON válido.
+RESPONDE EXCLUSIVAMENTE JSON.
 
-Nunca respondas texto plano.
+NO uses markdown.
 
-=========================
+NO uses \`\`\`json.
+
+NO expliques nada fuera del JSON.
+
+La respuesta debe iniciar con { y terminar con }.
+
+=================================
 FORMATO RESPUESTA TEXTO
-=========================
+=================================
 
 {
   "type": "text",
   "answer": "respuesta"
 }
 
-=========================
+=================================
 FORMATO RESPUESTA GRÁFICO
-=========================
+=================================
 
 {
   "type":"chart",
@@ -123,18 +114,18 @@ FORMATO RESPUESTA GRÁFICO
   "top":20
 }
 
-=========================
+=================================
 TIPOS DE GRÁFICO
-=========================
+=================================
 
 - bar
 - line
 - pie
 - scatter
 
-=========================
+=================================
 AGREGACIONES
-=========================
+=================================
 
 - sum
 - avg
@@ -142,9 +133,9 @@ AGREGACIONES
 - min
 - max
 
-=========================
+=================================
 REGLAS
-=========================
+=================================
 
 1. Analiza únicamente los datos entregados.
 2. No inventes información.
@@ -154,36 +145,27 @@ REGLAS
 6. Entrega insights accionables.
 7. Usa SOLO dimensiones y métricas existentes.
 
-=========================
+=================================
 DIMENSIONES DISPONIBLES
-=========================
+=================================
 
 ${dimensions.join(", ")}
 
-=========================
+=================================
 MÉTRICAS DISPONIBLES
-=========================
+=================================
 
 ${metrics.join(", ")}
 
-=========================
+=================================
 REGLA DE ORO
-=========================
+=================================
 
 Genera type="chart" únicamente cuando el usuario solicite explícitamente una visualización.
 
-Ejemplos:
-
-- Quiero un gráfico
-- Muéstrame una gráfica
-- Haz un chart
-- Visualiza los datos
-- Grafica la inversión
-- Quiero una visualización
-
-=========================
+=================================
 TOP N
-=========================
+=================================
 
 Si el usuario solicita:
 
@@ -197,9 +179,9 @@ Si no lo especifica:
 
 top = 20
 
-=========================
+=================================
 AGREGACIÓN
-=========================
+=================================
 
 Por defecto utiliza:
 
@@ -214,9 +196,9 @@ Si el usuario pide:
 - mínimo → min
 - máximo → max
 
-=========================
+=================================
 PREGUNTAS ANALÍTICAS
-=========================
+=================================
 
 Para preguntas como:
 
@@ -237,12 +219,13 @@ responde SIEMPRE:
   "answer":"..."
 }
 
-`
-                    },
+`;
 
-                    {
-                        role: "user",
-                        content: `
+        const prompt = `
+
+${systemPrompt}
+
+=================================
 
 CONTEXTO
 
@@ -266,15 +249,24 @@ PREGUNTA
 
 ${question}
 
-`
-                    }
+`;
 
-                ]
+        const response =
+            await client.models.generateContent({
+
+                model: "gemini-2.5-flash",
+
+                contents: prompt
 
             });
 
-        const content =
-            response.choices?.[0]?.message?.content || "{}";
+        let content =
+            response.text || "{}";
+
+        content = content
+            .replace(/```json/g, "")
+            .replace(/```/g, "")
+            .trim();
 
         let result;
 
