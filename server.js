@@ -107,6 +107,20 @@ Usa este formato cuando el usuario pida un resultado analítico, ranking, top, m
 }
 
 =================================
+FORMATO TOTAL
+=================================
+
+Usa este formato cuando el usuario
+solicite únicamente el valor total
+de una métrica.
+
+{
+  "action":"total",
+  "metric":"NombreMetrica",
+  "aggregation":"sum"
+}
+
+=================================
 FORMATO CHART
 =================================
 
@@ -195,6 +209,13 @@ REGLAS CRÍTICAS
 14. Por defecto usa aggregation="sum".
 15. Por defecto usa top=1 para preguntas de mayor/menor.
 16. Por defecto usa top=20 para gráficos.
+17. Si el usuario solicita únicamente el total de una métrica NO debes seleccionar ninguna dimensión.
+18. Para esos casos responde:
+{
+  "action":"total",
+  "metric":"NombreMetrica",
+  "aggregation":"sum"
+}
 
 =================================
 FILTROS
@@ -315,6 +336,39 @@ Dame insights
 Respuesta:
 {
   "action":"insight"
+}
+
+Usuario:
+Total de leads
+
+Respuesta:
+
+{
+  "action":"total",
+  "metric":"Leads",
+  "aggregation":"sum"
+}
+
+Usuario:
+Total de inversión
+
+Respuesta:
+
+{
+  "action":"total",
+  "metric":"Inversion",
+  "aggregation":"sum"
+}
+
+Usuario:
+Promedio de leads
+
+Respuesta:
+
+{
+  "action":"total",
+  "metric":"Leads",
+  "aggregation":"avg"
 }
 
 `;
