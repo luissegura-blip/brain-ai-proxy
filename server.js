@@ -31,10 +31,12 @@ app.post("/ai", async (req, res) => {
         const metrics =
             req.body.metrics || [];
 
+        const dimensionValues =
+            req.body.dimensionValues || {};
+
         const conversation =
             req.body.conversation || [];
-
-        if (!question) {
+                if (!question) {
 
             return res.status(400).json({
                 action: "text",
@@ -95,7 +97,13 @@ Usa este formato cuando el usuario pida un resultado analítico, ranking, top, m
   "metric":"NombreMetrica",
   "aggregation":"sum",
   "top":1,
-  "order":"desc"
+  "order":"desc",
+  "filters":[
+    {
+      "dimension":"NombreDimension",
+      "value":"Valor"
+    }
+  ]
 }
 
 =================================
@@ -138,6 +146,16 @@ MÉTRICAS DISPONIBLES
 ${metrics.join(", ")}
 
 =================================
+VALORES DISPONIBLES
+POR DIMENSIÓN
+=================================
+
+${JSON.stringify(
+    dimensionValues,
+    null,
+    2
+)}
+=================================
 AGREGACIONES DISPONIBLES
 =================================
 
@@ -177,6 +195,61 @@ REGLAS CRÍTICAS
 14. Por defecto usa aggregation="sum".
 15. Por defecto usa top=1 para preguntas de mayor/menor.
 16. Por defecto usa top=20 para gráficos.
+
+=================================
+FILTROS
+=================================
+Si el usuario menciona varios
+valores pertenecientes a distintas
+dimensiones debes devolver todos
+los filtros encontrados.
+
+Ejemplo:
+
+Top campañas del segmento móvil
+en canal Search
+
+Respuesta:
+
+{
+  "action":"analyze",
+  "dimension":"Campaña",
+  "metric":"Leads",
+  "aggregation":"sum",
+  "top":10,
+  "order":"desc",
+  "filters":[
+    {
+      "dimension":"Segmento",
+      "value":"MOVIL"
+    },
+    {
+      "dimension":"Canal",
+      "value":"SEARCH"
+    }
+  ]
+}
+
+Si el usuario menciona valores de dimensiones debes generar filtros.
+
+Ejemplo:
+
+¿Cuál es la mejor campaña del segmento móvil?
+
+{
+  "action":"analyze",
+  "dimension":"Campaña",
+  "metric":"Leads",
+  "aggregation":"sum",
+  "top":1,
+  "order":"desc",
+  "filters":[
+    {
+      "dimension":"Segmento",
+      "value":"MOVIL"
+    }
+  ]
+}
 
 =================================
 EJEMPLOS
@@ -263,6 +336,22 @@ ${metrics.join(", ")}
 Usuario solicitó gráfico:
 ${wantsChart}
 
+=================================
+CONTEXTO CONVERSACIONAL
+=================================
+
+Si la pregunta actual depende
+de preguntas anteriores debes
+usar el historial para inferir:
+
+- dimensión
+- métrica
+- filtros
+- ranking
+- top solicitado
+
+No pierdas el contexto.
+
 Historial de conversación:
 ${JSON.stringify(conversation)}
 
@@ -296,7 +385,57 @@ ${question}
             result =
                 JSON.parse(content);
 
-        } catch {
+        if (
+            result.dimension &&
+            !dimensions.includes(
+                result.dimension
+            )
+        ) {
+
+            const found =
+                dimensions.find(
+                    d =>
+                        d.toLowerCase()
+                        .includes(
+                            result.dimension.toLowerCase()
+                        )
+                );
+
+            if (found) {
+
+                result.dimension =
+                    found;
+
+            }
+
+        }                
+
+        if (
+            result.metric &&
+            !metrics.includes(
+                result.metric
+            )
+        ) {
+
+            const found =
+                metrics.find(
+                    d =>
+                        d.toLowerCase()
+                        .includes(
+                            result.metric.toLowerCase()
+                        )
+                );
+
+            if (found) {
+
+                result.metric =
+                    found;
+
+            }
+
+        }
+
+      } catch {
 
             result = {
                 action: "text",
