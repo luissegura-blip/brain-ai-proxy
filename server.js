@@ -25,18 +25,19 @@ app.post("/ai", async (req, res) => {
         const question =
             req.body.question || "";
 
-        const dataset =
-            req.body.dataset || [];
-
         const dimensions =
             req.body.dimensions || [];
 
         const metrics =
             req.body.metrics || [];
 
+        const conversation =
+            req.body.conversation || [];
+
         if (!question) {
 
             return res.status(400).json({
+                action: "text",
                 type: "text",
                 error: "No llegó ninguna pregunta"
             });
@@ -47,7 +48,6 @@ app.post("/ai", async (req, res) => {
             question.toLowerCase();
 
         const wantsChart =
-
             lowerQuestion.includes("gráfico") ||
             lowerQuestion.includes("grafico") ||
             lowerQuestion.includes("gráfica") ||
@@ -67,19 +67,11 @@ app.post("/ai", async (req, res) => {
 
         const systemPrompt = `
 
-Eres Brain AI.
+Eres Brain Assistant AI.
 
-Especialista senior en:
+Tu función principal NO es calcular valores numéricos.
 
-- Power BI
-- Marketing Intelligence
-- Media Analytics
-- Business Intelligence
-- Performance Digital
-- Share of Voice
-- Share of Investment
-
-IMPORTANTE
+Tu función principal es interpretar la intención del usuario y devolver una instrucción JSON para que Power BI calcule localmente.
 
 RESPONDE EXCLUSIVAMENTE JSON.
 
@@ -92,58 +84,46 @@ NO expliques nada fuera del JSON.
 La respuesta debe iniciar con { y terminar con }.
 
 =================================
-FORMATO RESPUESTA TEXTO
+FORMATO ANALYZE
 =================================
+
+Usa este formato cuando el usuario pida un resultado analítico, ranking, top, mayor, menor, promedio, máximo, mínimo o conteo.
 
 {
-  "type": "text",
-  "answer": "respuesta"
-}
-
-=================================
-FORMATO RESPUESTA GRÁFICO
-=================================
-
-{
-  "type":"chart",
-  "chartType":"bar",
-  "title":"Título",
+  "action":"analyze",
   "dimension":"NombreDimension",
   "metric":"NombreMetrica",
   "aggregation":"sum",
-  "top":20
+  "top":1,
+  "order":"desc"
 }
 
 =================================
-TIPOS DE GRÁFICO
+FORMATO CHART
 =================================
 
-- bar
-- line
-- pie
-- scatter
+Usa este formato únicamente cuando el usuario solicite explícitamente un gráfico, gráfica, visualización, chart o barras.
+
+{
+  "action":"chart",
+  "dimension":"NombreDimension",
+  "metric":"NombreMetrica",
+  "aggregation":"sum",
+  "chartType":"bar",
+  "top":20,
+  "order":"desc",
+  "title":"Título del gráfico"
+}
 
 =================================
-AGREGACIONES
+FORMATO INSIGHT
 =================================
 
-- sum
-- avg
-- count
-- min
-- max
+Usa este formato cuando el usuario pida insights, hallazgos, recomendaciones o resumen ejecutivo.
 
-=================================
-REGLAS
-=================================
-
-1. Analiza únicamente los datos entregados.
-2. No inventes información.
-3. No asumas métricas inexistentes.
-4. Responde siempre en español.
-5. Sé ejecutivo.
-6. Entrega insights accionables.
-7. Usa SOLO dimensiones y métricas existentes.
+{
+  "action":"insight"
+}
 
 =================================
 DIMENSIONES DISPONIBLES
@@ -158,65 +138,110 @@ MÉTRICAS DISPONIBLES
 ${metrics.join(", ")}
 
 =================================
-REGLA DE ORO
+AGREGACIONES DISPONIBLES
 =================================
 
-Genera type="chart" únicamente cuando el usuario solicite explícitamente una visualización.
+- sum
+- avg
+- count
+- min
+- max
 
 =================================
-TOP N
+TIPOS DE GRÁFICO DISPONIBLES
 =================================
 
-Si el usuario solicita:
-
-- Top 5
-- Top 10
-- Top 20
-
-extrae el valor y úsalo en "top".
-
-Si no lo especifica:
-
-top = 20
+- bar
+- line
+- pie
+- scatter
+- doughnut
 
 =================================
-AGREGACIÓN
+REGLAS CRÍTICAS
 =================================
 
-Por defecto utiliza:
-
-aggregation = "sum"
-
-Si el usuario pide:
-
-- promedio → avg
-- media → avg
-- cantidad → count
-- conteo → count
-- mínimo → min
-- máximo → max
+1. Usa SOLO dimensiones existentes.
+2. Usa SOLO métricas existentes.
+3. NO inventes nombres de campos.
+4. NO hagas cálculos.
+5. NO respondas resultados numéricos.
+6. NO analices el dataset.
+7. Devuelve únicamente la instrucción JSON.
+8. Si el usuario pide "mayor", "más", "top", "ranking" usa order="desc".
+9. Si el usuario pide "menor", "menos", "peor" usa order="asc".
+10. Si el usuario pide promedio o media usa aggregation="avg".
+11. Si el usuario pide cantidad o conteo usa aggregation="count".
+12. Si el usuario pide máximo usa aggregation="max".
+13. Si el usuario pide mínimo usa aggregation="min".
+14. Por defecto usa aggregation="sum".
+15. Por defecto usa top=1 para preguntas de mayor/menor.
+16. Por defecto usa top=20 para gráficos.
 
 =================================
-PREGUNTAS ANALÍTICAS
+EJEMPLOS
 =================================
 
-Para preguntas como:
+Usuario:
+¿Cuál es el segmento con más leads?
 
-- Top canal
-- Mejor campaña
-- Ranking
-- Hallazgos
-- Insights
-- Recomendaciones
-- Resumen
-- Comparativo
-- Análisis
-
-responde SIEMPRE:
-
+Respuesta:
 {
-  "type":"text",
-  "answer":"..."
+  "action":"analyze",
+  "dimension":"Segmento",
+  "metric":"Leads",
+  "aggregation":"sum",
+  "top":1,
+  "order":"desc"
+}
+
+Usuario:
+Top 10 campañas por inversión
+
+Respuesta:
+{
+  "action":"analyze",
+  "dimension":"Campaña",
+  "metric":"Inversion",
+  "aggregation":"sum",
+  "top":10,
+  "order":"desc"
+}
+
+Usuario:
+Quiero un gráfico de inversión por canal
+
+Respuesta:
+{
+  "action":"chart",
+  "dimension":"Canal",
+  "metric":"Inversion",
+  "aggregation":"sum",
+  "chartType":"bar",
+  "top":20,
+  "order":"desc",
+  "title":"Inversión por canal"
+}
+
+Usuario:
+Dame el promedio de leads por campaña
+
+Respuesta:
+{
+  "action":"analyze",
+  "dimension":"Campaña",
+  "metric":"Leads",
+  "aggregation":"avg",
+  "top":20,
+  "order":"desc"
+}
+
+Usuario:
+Dame insights
+
+Respuesta:
+{
+  "action":"insight"
 }
 
 `;
@@ -235,17 +260,13 @@ ${dimensions.join(", ")}
 Métricas:
 ${metrics.join(", ")}
 
-Cantidad de registros:
-${dataset.length}
-
 Usuario solicitó gráfico:
 ${wantsChart}
 
-DATOS
+Historial de conversación:
+${JSON.stringify(conversation)}
 
-${JSON.stringify(dataset)}
-
-PREGUNTA
+PREGUNTA ACTUAL
 
 ${question}
 
@@ -278,6 +299,7 @@ ${question}
         } catch {
 
             result = {
+                action: "text",
                 type: "text",
                 answer: content
             };
@@ -286,14 +308,18 @@ ${question}
 
         if (
             !wantsChart &&
-            result.type === "chart"
+            result.action === "chart"
         ) {
 
-            result = {
-                type: "text",
-                answer:
-                    "La solicitud corresponde a un análisis. No se requiere gráfico."
-            };
+            result.action =
+                "analyze";
+
+            delete result.chartType;
+            delete result.title;
+
+            if (!result.top) {
+                result.top = 1;
+            }
 
         }
 
@@ -305,6 +331,7 @@ ${question}
 
         res.status(500).json({
 
+            action: "text",
             type: "text",
 
             error:
@@ -327,4 +354,3 @@ app.listen(PORT, () => {
     );
 
 });
-
