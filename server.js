@@ -216,6 +216,22 @@ REGLAS CRÍTICAS
   "metric":"NombreMetrica",
   "aggregation":"sum"
 }
+19. Si el usuario solicita:
+
+- total
+- sumatoria
+- suma
+- acumulado
+
+de una métrica,
+
+responde SIEMPRE:
+
+{
+  "action":"total",
+  "metric":"NombreMetrica",
+  "aggregation":"sum"
+}
 
 =================================
 FILTROS
@@ -371,6 +387,40 @@ Respuesta:
   "aggregation":"avg"
 }
 
+Usuario:
+Total de leads en 2023
+
+Respuesta:
+
+{
+  "action":"total",
+  "metric":"Leads",
+  "aggregation":"sum",
+  "filters":[
+    {
+      "dimension":"año",
+      "value":"2023"
+    }
+  ]
+}
+
+Usuario:
+Sumatoria de leads en 2026
+
+Respuesta:
+
+{
+  "action":"total",
+  "metric":"Leads",
+  "aggregation":"sum",
+  "filters":[
+    {
+      "dimension":"año",
+      "value":"2026"
+    }
+  ]
+}
+
 `;
 
         const prompt = `
@@ -515,6 +565,14 @@ ${question}
             }
 
         }
+
+        console.log(
+            JSON.stringify(
+                result,
+                null,
+                2
+            )
+        );
 
         res.json(result);
 
